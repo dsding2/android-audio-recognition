@@ -1,17 +1,9 @@
 package app.danielding.voiceactivation
 
 import android.content.Context
-import android.media.AudioFormat
 import android.media.AudioRecord
-import android.media.AudioTrack
-import android.media.MediaRecorder
 import android.util.Log
-import be.tarsos.dsp.io.TarsosDSPAudioFormat
 import java.io.ByteArrayOutputStream
-import java.io.File
-import java.io.FileOutputStream
-import java.io.IOException
-import kotlin.math.min
 
 class AudioRecorder(
     private val context: Context,
@@ -63,38 +55,5 @@ class AudioRecorder(
         recordingThread?.join()
         AudioStorage.writeDataToFile(context, outputFilename, audioDataBuffer.toByteArray())
         audioDataBuffer.reset()
-    }
-
-    private fun playAudio(data: ByteArray) {
-        var audioTrack = AudioTrack.Builder()
-            .setAudioFormat(
-                AudioFormat.Builder()
-                    .setEncoding(Globals.AUDIO_ENCODING)
-                    .setSampleRate(Globals.SAMPLE_RATE)
-                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                    .build()
-            )
-            .setBufferSizeInBytes(Globals.BUFFER_SIZE)
-            .build()
-
-        audioTrack.play()
-        Thread {
-            readFileToAudioTrack(audioTrack, data)
-        }.start()
-    }
-    // Function to stop audio playback
-    private fun stopAudio(audioTrack: AudioTrack) {
-        audioTrack.stop()
-        audioTrack.release()
-    }
-
-    private fun readFileToAudioTrack(audioTrack: AudioTrack, data: ByteArray) {
-        var offset = 0
-        while (offset < data.size) {
-            val written = audioTrack.write(data, offset, min(Globals.BUFFER_SIZE, data.size - offset))
-            offset += written
-            Log.d("button res", "$written")
-        }
-        stopAudio(audioTrack)
     }
 }

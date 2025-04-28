@@ -2,6 +2,7 @@ package app.danielding.voiceactivation.ui
 
 import app.danielding.voiceactivation.R
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.AudioFormat
 import android.media.AudioRecord
@@ -14,8 +15,8 @@ import android.widget.LinearLayout
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import app.danielding.voiceactivation.AudioRecorder
@@ -24,9 +25,10 @@ import app.danielding.voiceactivation.Globals
 import app.danielding.voiceactivation.VideoStorage
 import app.danielding.voiceactivation.ui.components.AudioRow
 import app.danielding.voiceactivation.ui.components.VideoPickerButton
+import app.danielding.voiceactivation.ui.PlaybackActivity
 
 
-class RecordActivity : ComponentActivity() {
+class RecordActivity : AppCompatActivity() {
     private lateinit var recordButton: Button
     private lateinit var audioLayout: LinearLayout
     private lateinit var audioRecorder: AudioRecorder
@@ -36,6 +38,9 @@ class RecordActivity : ComponentActivity() {
     private var recording = false
     private var counter = 0
     private var lastFilename = "idle"
+    private val usedNames = mutableSetOf<Int>()
+
+//    private lateinit var playbackIntent : Intent
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -44,6 +49,10 @@ class RecordActivity : ComponentActivity() {
         recordButton = findViewById(R.id.recordButton)
         audioLayout = findViewById(R.id.audioLayout)
 
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+            != PackageManager.PERMISSION_GRANTED) {
+            return
+        }
         audioRecord = AudioRecord(
             MediaRecorder.AudioSource.MIC,
             Globals.SAMPLE_RATE,
@@ -55,28 +64,37 @@ class RecordActivity : ComponentActivity() {
         recordButton.setOnClickListener {
             if (!recording) {
                 recording = true
-                audioRecorder.startRecording("$counter.pcm")
+                audioRecorder.startRecording("${getId()}")
                 recordButton.text="Stop Recording"
             } else {
                 recording = false
                 audioRecorder.stopRecording()
-                addRow("$counter.pcm")
-                counter += 1
+                addRow("${getId()}")
+                incrementId()
                 recordButton.text="Record"
             }
         }
 
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
-            != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), 1)
+        val deleteButton : Button = findViewById(R.id.clearDataButton)
+        deleteButton.setOnClickListener {
+            AudioStorage.clear(this)
+            VideoStorage.clear(this)
+            audioLayout.removeAllViews()
+        }
+
+        val playbackLinkButton : Button = findViewById(R.id.playbackLinkButton)
+        playbackLinkButton.setOnClickListener {
+            val intent = Intent(this, PlaybackActivity::class.java)
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            startActivity(intent)
         }
 
         pickMedia = registerForActivityResult(PickVisualMedia()) { uri ->
             if (uri != null) {
-                Log.d("PhotoPicker", "Selected URI: $uri, $lastFilename")
+//                Log.d("PhotoPicker", "Selected URI: $uri, $lastFilename")
                 saveVideo(lastFilename, uri)
             } else {
-                Log.d("PhotoPicker", "No media selected")
+//                Log.d("PhotoPicker", "No media selected")
             }
         }
 
@@ -84,13 +102,15 @@ class RecordActivity : ComponentActivity() {
         val idleVideoPickerButton = VideoPickerButton(this, pickMedia, "idle") {
                 filename->lastFilename=filename
         }
+        idleVideoPickerButton.text = "Set Idle Video"
         idleVideoPickerLayout.addView(idleVideoPickerButton)
 
         val allFiles = AudioStorage.getAll(this)
-        counter = allFiles.size
         for (file in allFiles) {
+            usedNames.add(file.name.toIntOrNull() ?: -1)
             addRow(file.name)
         }
+        incrementId()
     }
 
     override fun onPause() {
@@ -119,6 +139,15 @@ class RecordActivity : ComponentActivity() {
     }
 
     private fun saveVideo(filename: String, uri: Uri) {
-        VideoStorage.putData(this, filename, uri)
+        VideoStorage.saveVideo(this, filename, uri)
+    }
+
+    private fun incrementId() {
+        while (counter in usedNames) {
+            counter += 1
+        }
+    }
+    private fun getId(): Int {
+        return counter
     }
 }

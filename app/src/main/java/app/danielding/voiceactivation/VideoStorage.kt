@@ -2,6 +2,7 @@ package app.danielding.voiceactivation
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -9,64 +10,62 @@ import androidx.core.net.toUri
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+import java.io.InputStream
 
 object VideoStorage {
-    private val Context.dataStore by preferencesDataStore(name = "video_data_store")
-    private val VIDEO_MAP_KEY = stringPreferencesKey("video_map_key")
-
-    // Save a Map<String, Uri> to the DataStore
-    fun saveData(context: Context, data: Map<String, Uri>) {
-        // Serialize the map to a JSON string
-        val jsonString = mapToJson(data)
-
-        // Save the JSON string in DataStore
-        runBlocking {
-            context.dataStore.edit { preferences ->
-                preferences[VIDEO_MAP_KEY] = jsonString
-            }
+    private val subdirName = "video"
+    fun getFile(context: Context, filename: String): File? {
+        return try {
+            val subdir = File(context.filesDir, subdirName)
+            return File(subdir, filename)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
         }
     }
 
-    fun putData(context: Context, key: String, video: Uri) {
-        val data = getData(context).toMutableMap()
-        data[key] = video
-        saveData(context, data)
-    }
-
-    // Retrieve the Map<String, Uri> from the DataStore
-    fun getData(context: Context): Map<String, Uri> {
-        var data: Map<String, Uri> = emptyMap()
-
-        // Retrieve the JSON string from DataStore and deserialize it into a Map
-        runBlocking {
-            val preferences = context.dataStore.data.first()
-            val jsonString = preferences[VIDEO_MAP_KEY]
-
-            // If the JSON string is not null, deserialize it
-            if (jsonString != null) {
-                data = jsonToMap(jsonString)
-            }
+    fun saveVideo(context: Context, audioFilename: String, videoUri: Uri): Boolean {
+        val filename = audioFilename
+        val subdir = File(context.filesDir, subdirName)
+        if (!subdir.exists()) {
+            val created = subdir.mkdirs()  // Create the subdirectory if it doesn't exist
+            if (!created) return false
         }
-        return data
+
+        deleteVideo(context, audioFilename)
+        val videoFile = File(subdir, filename)
+        return try {
+            val inputStream: InputStream? = context.contentResolver.openInputStream(videoUri)
+            inputStream?.let {
+                val fileOutputStream = FileOutputStream(videoFile)
+                val buffer = ByteArray(1024)
+                var length: Int
+                while (it.read(buffer).also { n -> length = n } > 0) {
+                    fileOutputStream.write(buffer, 0, length)
+                }
+                it.close()
+                fileOutputStream.close()
+                true
+            } == true
+        } catch (e: IOException) {
+            Log.e("VideoStorage", "Error saving video", e)
+            false
+        }
     }
 
-    private fun mapToJson(map: Map<String, Uri>): String {
-        val jsonEntries = map.map {
-            // Escape the key and Uri values properly for JSON
-            "\"${it.key}\":\"${it.value.toString()}\""
-        }.joinToString(",")
-
-        return "{ $jsonEntries }"
+    fun deleteVideo(context: Context, filename: String) {
+        getFile(context, filename)?.delete()
     }
 
-    // Convert JSON string back to Map<String, Uri>
-    private fun jsonToMap(json: String): Map<String, Uri> {
-        // Strip the outer curly braces and split into key-value pairs
-        val entries = json.removeSurrounding("{", "}").split(",")
+    fun clear(context: Context) {
+        val directory = File(context.filesDir, subdirName)
 
-        return entries.associate { entry ->
-            val (key, value) = entry.split(":").map { it.trim().removeSurrounding("\"") }
-            key to value.toUri()
+        if (directory.exists() && directory.isDirectory) {
+            // Get all files in the directory (excluding subdirectories)
+            directory.listFiles()?.forEach { it.delete() }
         }
     }
 }

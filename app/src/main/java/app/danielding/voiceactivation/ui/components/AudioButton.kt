@@ -1,17 +1,12 @@
 package app.danielding.voiceactivation.ui.components
 
 import android.content.Context
-import android.media.AudioAttributes
 import android.media.AudioFormat
-import android.media.AudioManager
 import android.media.AudioTrack
-import android.media.MediaPlayer
 import android.util.Log
-import android.widget.Button
 import androidx.appcompat.widget.AppCompatButton
+import app.danielding.voiceactivation.AudioStorage
 import app.danielding.voiceactivation.Globals
-import java.io.File
-import java.io.FileInputStream
 import java.io.IOException
 
 // Custom Button class
@@ -72,8 +67,7 @@ class AudioButton(
     }
 
     private fun readFileToAudioTrack(context: Context, audioTrack: AudioTrack, filename: String) {
-        val file = File(context.filesDir, filename)
-        val audioBytes = file.readBytes()
+        val audioBytes = AudioStorage.getFile(context, filename)?.readBytes() ?: ByteArray(0)
         var offset = 0
         while (offset < audioBytes.size) {
             val written = audioTrack.write(audioBytes, offset, Globals.BUFFER_SIZE)
@@ -83,13 +77,13 @@ class AudioButton(
         stopAudio(audioTrack)
     }
     private fun loadFileToByteArray(context: Context, fileName: String): ByteArray {
-        val file = File(context.filesDir, fileName)
         return try {
             // Open the file and read it into a ByteArray
-            val fileInputStream = FileInputStream(file)
-            val byteArray = ByteArray(file.length().toInt())
-            fileInputStream.read(byteArray)
-            fileInputStream.close() // Close the stream after reading
+            val file = AudioStorage.getFileObj(context, fileName)
+            val fileInputStream = AudioStorage.getFile(context, fileName)
+            val byteArray = ByteArray(file?.length()?.toInt() ?: 0)
+            fileInputStream?.read(byteArray)
+            fileInputStream?.close() // Close the stream after reading
             byteArray
         } catch (e: IOException) {
             e.printStackTrace()
