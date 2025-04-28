@@ -6,6 +6,7 @@ import app.danielding.voiceactivation.AudioStorage
 import app.danielding.voiceactivation.CircularBuffer
 import app.danielding.voiceactivation.Globals
 import app.danielding.voiceactivation.R
+import app.danielding.voiceactivation.TuningStorage
 import be.tarsos.dsp.AudioDispatcher
 import be.tarsos.dsp.AudioEvent
 import be.tarsos.dsp.AudioProcessor
@@ -22,6 +23,7 @@ class ReferenceComparison(
     private val audioFilename: String,
     private val onSimilarity: (String)->Unit
 ) {
+    var sensitivity = 1.0
     private var referenceTimeSeries: TimeSeries
     private val referenceMFCC = MFCC(
         Globals.SAMPLES_PER_FRAME,
@@ -32,9 +34,11 @@ class ReferenceComparison(
         Globals.MFCC_UPPER_CUTOFF,
     )
     private var liveMfccBuffer: CircularBuffer
+    private var lastDistance = 0.0
     private var lastSeenTime = 0.0
     private var clipLength = 0.0
     private var rollingDistAvg = 0.0
+
     init {
         Log.d("extracting file", audioFilename)
         referenceTimeSeries = extractMFCC(
@@ -44,6 +48,7 @@ class ReferenceComparison(
         )
         clipLength = referenceTimeSeries.getTimeAtNthPoint(referenceTimeSeries.size()-1)- referenceTimeSeries.getTimeAtNthPoint(0)
         liveMfccBuffer = CircularBuffer((referenceTimeSeries.size()*1.2).toInt())
+        sensitivity = TuningStorage.getValue(context, audioFilename)
     }
 
     fun onNewCoefficients(point: Pair<Double, FloatArray>) {
@@ -55,15 +60,27 @@ class ReferenceComparison(
         val seenDistance = FastDTW.compare(referenceTimeSeries, ts, EuclideanDistance()).distance
         if (currentTime < lastSeenTime + clipLength*1.5) {
             rollingDistAvg = seenDistance
-        } else if (seenDistance < rollingDistAvg*.6) {
+        } else if (seenDistance < rollingDistAvg*.5*sensitivity) {
 //            Log.d("Output!!", "Similar Audio Clip Detected")
             onSimilarity(audioFilename)
             lastSeenTime = currentTime
         }
 //        Log.d("rolling avg", "$rollingDistAvg, $seenDistance")
+        lastDistance = seenDistance
         rollingDistAvg = (rollingDistAvg * 99 + seenDistance)/100
 
 //        Log.d("similarity", "$seenSimilarity")
+    }
+
+    fun getRollingAvg(): Double {
+        return rollingDistAvg
+    }
+    fun getLastDistance(): Double {
+        return lastDistance
+    }
+
+    fun getAudioFilename(): String {
+        return audioFilename
     }
 
     private fun extractMFCC(inputStream: UniversalAudioInputStream): TimeSeries {

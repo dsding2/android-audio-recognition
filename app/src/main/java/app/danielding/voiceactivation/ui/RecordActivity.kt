@@ -23,6 +23,7 @@ import app.danielding.voiceactivation.AudioRecorder
 import app.danielding.voiceactivation.AudioStorage
 import app.danielding.voiceactivation.Globals
 import app.danielding.voiceactivation.VideoStorage
+import app.danielding.voiceactivation.TuningStorage
 import app.danielding.voiceactivation.ui.components.AudioRow
 import app.danielding.voiceactivation.ui.components.VideoPickerButton
 import app.danielding.voiceactivation.ui.PlaybackActivity
@@ -48,6 +49,11 @@ class RecordActivity : AppCompatActivity() {
         setContentView(R.layout.activity_record)
         recordButton = findViewById(R.id.recordButton)
         audioLayout = findViewById(R.id.audioLayout)
+        val tuningLinkButton : Button = findViewById(R.id.tuningLinkButton)
+        tuningLinkButton.setOnClickListener {
+            val intent = Intent(this, TuningActivity::class.java)
+            startActivity(intent)
+        }
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
             != PackageManager.PERMISSION_GRANTED) {
@@ -69,6 +75,7 @@ class RecordActivity : AppCompatActivity() {
             } else {
                 recording = false
                 audioRecorder.stopRecording()
+                usedNames.add(getId())
                 addRow("${getId()}")
                 incrementId()
                 recordButton.text="Record"
@@ -79,6 +86,7 @@ class RecordActivity : AppCompatActivity() {
         deleteButton.setOnClickListener {
             AudioStorage.clear(this)
             VideoStorage.clear(this)
+            TuningStorage.clear(this)
             audioLayout.removeAllViews()
         }
 

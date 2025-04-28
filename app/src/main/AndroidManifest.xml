@@ -23,6 +23,7 @@
         <activity android:name=".AudioProcessing" />
         <activity android:name=".ui.RecordActivity" />
         <activity android:name=".ui.PlaybackActivity"/>
+        <activity android:name=".ui.TuningActivity"/>
 
     </application>
 

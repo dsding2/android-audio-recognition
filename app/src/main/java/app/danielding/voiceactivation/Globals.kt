@@ -21,5 +21,6 @@ class Globals : Application() {
         const val MFCC_NUM_FILTERS = 25
         const val MFCC_LOWER_CUTOFF = 40f
         const val MFCC_UPPER_CUTOFF = 8000f
+        const val DEFAULT_TUNING = 1.0
     }
 }

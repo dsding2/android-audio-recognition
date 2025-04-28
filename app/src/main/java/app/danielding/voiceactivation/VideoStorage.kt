@@ -20,7 +20,12 @@ object VideoStorage {
     fun getFile(context: Context, filename: String): File? {
         return try {
             val subdir = File(context.filesDir, subdirName)
-            return File(subdir, filename)
+            val file = File(subdir, filename)
+            if (file.exists()) {
+                file
+            } else {
+                null
+            }
         } catch (e: Exception) {
             e.printStackTrace()
             null

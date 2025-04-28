@@ -28,19 +28,22 @@ class ReferenceController (
     context: Context,
     onSimilarity: (String)->Unit
 ){
-    private var referenceComparators : Array<ReferenceComparison?>
+    private var referenceComparators = mutableMapOf<String, ReferenceComparison>()
     init {
         val allAudio = AudioStorage.getAll(context)
-        referenceComparators = Array<ReferenceComparison?>(allAudio.size) { null }
         for (i in 0 until allAudio.size) {
-            referenceComparators[i] =
+            referenceComparators[allAudio[i].name] =
                 ReferenceComparison(context, allAudio[i].name, onSimilarity)
         }
     }
 
-    private fun broadcastMfcc(point: Pair<Double, FloatArray>) {
+    fun broadcastMfcc(point: Pair<Double, FloatArray>) {
         for (rc in referenceComparators) {
-            rc?.onNewCoefficients(point)
+            rc.value.onNewCoefficients(point)
         }
+    }
+
+    fun getReferenceComparator(filename: String): ReferenceComparison? {
+        return referenceComparators[filename]
     }
 }
