@@ -5,11 +5,8 @@ import android.util.Log
 import app.danielding.voiceactivation.AudioStorage
 import app.danielding.voiceactivation.CircularBuffer
 import app.danielding.voiceactivation.Globals
-import app.danielding.voiceactivation.R
 import app.danielding.voiceactivation.TuningStorage
 import be.tarsos.dsp.AudioDispatcher
-import be.tarsos.dsp.AudioEvent
-import be.tarsos.dsp.AudioProcessor
 import be.tarsos.dsp.io.UniversalAudioInputStream
 import be.tarsos.dsp.mfcc.MFCC
 import com.fastdtw.dtw.FastDTW
@@ -33,22 +30,28 @@ class ReferenceComparison(
         Globals.MFCC_LOWER_CUTOFF,
         Globals.MFCC_UPPER_CUTOFF,
     )
+    private var referenceList = mutableListOf<Pair<Double, FloatArray>>()
     private var liveMfccBuffer: CircularBuffer
     private var lastDistance = 0.0
     private var lastSeenTime = 0.0
     private var clipLength = 0.0
     private var rollingDistAvg = 0.0
+    private var similarityDetectedTime = -1.0
+    private var alpha = 1.0/100.0
 
     init {
-        Log.d("extracting file", audioFilename)
-        referenceTimeSeries = extractMFCC(
+        extractMFCC(
             UniversalAudioInputStream(
                 AudioStorage.getFile(context, audioFilename), Globals.TARSOS_AUDIO_FORMAT
             )
         )
+        referenceTimeSeries = buildTimeSeries(referenceList)
+//        Log.d("reference time series len", "${referenceTimeSeries.size()}, ${referenceTimeSeries.numOfDimensions()}")
         clipLength = referenceTimeSeries.getTimeAtNthPoint(referenceTimeSeries.size()-1)- referenceTimeSeries.getTimeAtNthPoint(0)
         liveMfccBuffer = CircularBuffer((referenceTimeSeries.size()*1.2).toInt())
         sensitivity = TuningStorage.getValue(context, audioFilename)
+        alpha = 1.0/50.0 / clipLength
+        Log.d("rolling avg alpha", "$alpha")
     }
 
     fun onNewCoefficients(point: Pair<Double, FloatArray>) {
@@ -58,57 +61,59 @@ class ReferenceComparison(
         val ts = buildTimeSeries(liveList)
 
         val seenDistance = FastDTW.compare(referenceTimeSeries, ts, EuclideanDistance()).distance
-        if (currentTime < lastSeenTime + clipLength*1.5) {
-            rollingDistAvg = seenDistance
-        } else if (seenDistance < rollingDistAvg*.5*sensitivity) {
-//            Log.d("Output!!", "Similar Audio Clip Detected")
+        if (seenDistance < rollingDistAvg && similarityDetectedTime < 0) {
+            similarityDetectedTime = currentTime
+        } else if (similarityDetectedTime > 0 && seenDistance >= rollingDistAvg) {
+//            Log.d("rolling avg time", "${(currentTime - similarityDetectedTime)/clipLength}")
+//            if (similarityDetectedTime < lastSeenTime && currentTime - similarityDetectedTime > clipLength*.6) {
+//                onSimilarity(audioFilename)
+//            }
+            similarityDetectedTime = -1.0
+
+        }
+        if (currentTime < lastSeenTime + clipLength *2) {
+//            rollingDistAvg = seenDistance
+        } else if (seenDistance < rollingDistAvg*sensitivity) {
+//            Log.d("rolling avg output", "Similar Audio Clip Detected")
+//            sharpSimilarityDetectedTime = currentTime
             onSimilarity(audioFilename)
             lastSeenTime = currentTime
         }
-//        Log.d("rolling avg", "$rollingDistAvg, $seenDistance")
+        if (rollingDistAvg > 0) {
+            Log.d("rolling avg disp", "${seenDistance/rollingDistAvg}")
+        }
         lastDistance = seenDistance
-        rollingDistAvg = (rollingDistAvg * 99 + seenDistance)/100
+        rollingDistAvg = rollingDistAvg * (1-alpha) + seenDistance * alpha
 
 //        Log.d("similarity", "$seenSimilarity")
     }
 
-    fun getRollingAvg(): Double {
-        return rollingDistAvg
-    }
-    fun getLastDistance(): Double {
-        return lastDistance
+    private fun addReferenceCoefficients(point: Pair<Double, FloatArray>) {
+        referenceList.add(point)
     }
 
-    fun getAudioFilename(): String {
-        return audioFilename
-    }
-
-    private fun extractMFCC(inputStream: UniversalAudioInputStream): TimeSeries {
+    private fun extractMFCC(inputStream: UniversalAudioInputStream) {
         val dispatcher =
             AudioDispatcher(inputStream, Globals.SAMPLES_PER_FRAME, Globals.BUFFER_OVERLAP)
 
-        var outTimeSeries = TimeSeriesBase.builder()
-        dispatcher.addAudioProcessor(referenceMFCC)
-        dispatcher.addAudioProcessor(object : AudioProcessor {
-            override fun process(audioEvent: AudioEvent): Boolean {
-                val doubleArray = referenceMFCC.mfcc.map { it.toDouble() }.toDoubleArray()
-                outTimeSeries.add(audioEvent.timeStamp, TimeSeriesPoint(doubleArray))
-                return true
-            }
-            override fun processingFinished() {
-            }
-        })
+//        dispatcher.addAudioProcessor(referenceMFCC)
+        val featureExtractor = FeatureExtractor(referenceMFCC, this::addReferenceCoefficients)
+        dispatcher.addAudioProcessor(featureExtractor)
         dispatcher.run()
         dispatcher.stop()
-        return outTimeSeries.build()
     }
 
     private fun buildTimeSeries(coeffsList: List<Pair<Double, FloatArray>>) : TimeSeries {
         val builder = TimeSeriesBase.builder()
-        coeffsList.forEach {
+        val normalizedList = FeatureExtractor.zScoreNormalize(coeffsList)
+        normalizedList.forEach {
             val doubleArray = it.second.map { it.toDouble() }.toDoubleArray()
             builder.add(it.first, TimeSeriesPoint(doubleArray))
         }
         return builder.build()
+    }
+
+    fun renormalize() {
+        referenceTimeSeries = buildTimeSeries(referenceList)
     }
 }

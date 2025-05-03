@@ -21,10 +21,6 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         val switchButton: Button = findViewById(R.id.button)
-        switchButton.setOnClickListener {
-            val intent = Intent(this, AudioProcessing::class.java)
-            startActivity(intent)
-        }
 
         val recordLinkButton: Button = findViewById(R.id.recordLinkButton)
         recordLinkButton.setOnClickListener {

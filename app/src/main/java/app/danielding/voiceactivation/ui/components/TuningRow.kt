@@ -31,7 +31,7 @@ class TuningRow(
 
         val slider = SeekBar(context).apply {
             max = 100
-            progress = 50
+            progress = sensitivityToSlider(TuningStorage.getValue(context, filename))
             layoutParams = LayoutParams(
                 0,
                 LayoutParams.WRAP_CONTENT
@@ -44,7 +44,7 @@ class TuningRow(
         // Listen for slider changes
         slider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                changeSensitivity(0.25 + progress * (1.5 - 0.25) / 100.0)
+                changeSensitivity(sliderToSensitivity(progress))
             }
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
@@ -71,6 +71,13 @@ class TuningRow(
     private fun changeSensitivity(newVal: Double) {
         referenceComparison?.sensitivity = newVal
         TuningStorage.putData(context, filename, newVal)
+    }
+
+    private fun sensitivityToSlider(sensitivity: Double): Int {
+        return ((sensitivity - .4) / (.9 - .4) * 100.0).toInt()
+    }
+    private fun sliderToSensitivity(slider: Int): Double {
+        return (slider / 100.0) * (.9 - .4) + .4
     }
     fun onSimilarity() {
         box.setBackgroundColor(

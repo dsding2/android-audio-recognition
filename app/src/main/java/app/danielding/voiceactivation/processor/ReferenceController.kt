@@ -46,4 +46,10 @@ class ReferenceController (
     fun getReferenceComparator(filename: String): ReferenceComparison? {
         return referenceComparators[filename]
     }
+
+    fun renormalizeAll() {
+        for (rc in referenceComparators) {
+            rc.value.renormalize()
+        }
+    }
 }

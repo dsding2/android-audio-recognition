@@ -1,22 +1,9 @@
 package app.danielding.voiceactivation.processor
 
-import android.Manifest
-import android.media.AudioFormat
 import android.media.AudioRecord
-import android.media.MediaRecorder
-import android.net.Uri
-import android.os.Bundle
 import android.os.Process
-import android.util.Log
-import android.widget.VideoView
-import androidx.annotation.RequiresPermission
-import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.ui.autofill.Autofill
 import app.danielding.voiceactivation.AudioRecordInputStream
-import app.danielding.voiceactivation.AudioStorage
 import app.danielding.voiceactivation.Globals
-import app.danielding.voiceactivation.R
-import app.danielding.voiceactivation.VideoStorage
 import be.tarsos.dsp.AudioDispatcher
 import be.tarsos.dsp.AudioEvent
 import be.tarsos.dsp.AudioProcessor
@@ -25,19 +12,20 @@ import be.tarsos.dsp.mfcc.MFCC
 
 
 class CaptureController (
-    audioRecord: AudioRecord,
+    private val audioRecord: AudioRecord,
     private val onMfccRead: (Pair<Double, FloatArray>)->Unit
 ) : AutoCloseable {
     private lateinit var dispatcher: AudioDispatcher
+
     init {
-        captureAudio(audioRecord)
+        captureAudio()
     }
 
     override fun close() {
         dispatcher.stop()
     }
 
-    private fun captureAudio(audioRecord: AudioRecord) {
+    private fun captureAudio() {
         val audioStream = UniversalAudioInputStream(
             AudioRecordInputStream(audioRecord),
             Globals.TARSOS_AUDIO_FORMAT
@@ -50,21 +38,37 @@ class CaptureController (
             Globals.MFCC_LOWER_CUTOFF,
             Globals.MFCC_UPPER_CUTOFF,
         )
-        val capturingProcessor: AudioProcessor = object : AudioProcessor {
-            override fun process(audioEvent: AudioEvent): Boolean {
-                onMfccRead(audioEvent.timeStamp to liveMfcc.mfcc.clone())
-                return true
-            }
-            override fun processingFinished() {
-            }
-        }
+        val featureExtractor = FeatureExtractor(liveMfcc, onMfccRead)
 
         dispatcher = AudioDispatcher(audioStream, Globals.SAMPLES_PER_FRAME, Globals.BUFFER_OVERLAP)
-        dispatcher.addAudioProcessor(liveMfcc)
-        dispatcher.addAudioProcessor(capturingProcessor)
+        dispatcher.addAudioProcessor(featureExtractor)
+
+        val validityChecker = object : AudioProcessor {
+            var badReads = 0
+            override fun process(audioEvent: AudioEvent): Boolean {
+                if (audioEvent.rms == 0.0) {
+                    badReads += 1
+                    if (badReads > 10) {
+                        restart()
+                        badReads = 0
+                    }
+                } else {
+                    badReads = 0
+                }
+                return true
+            }
+            override fun processingFinished() {}
+        }
+        dispatcher.addAudioProcessor(validityChecker)
+
         Thread {
             Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO)
             dispatcher.run()
         }.start()
+    }
+
+    private fun restart() {
+        audioRecord.stop()
+        audioRecord.startRecording()
     }
 }

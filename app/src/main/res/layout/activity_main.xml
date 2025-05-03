@@ -5,15 +5,9 @@
     android:layout_height="match_parent">
 
     <Button
-        android:id="@+id/button"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Go to audio debug" />
-
-    <Button
         android:id="@+id/recordLinkButton"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="160dp"
         android:text="Change Recordings" />
 
 </LinearLayout>

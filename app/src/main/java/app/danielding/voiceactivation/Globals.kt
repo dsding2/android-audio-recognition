@@ -18,9 +18,9 @@ class Globals : Application() {
         const val SAMPLES_PER_FRAME = 2048
         const val BUFFER_OVERLAP = SAMPLES_PER_FRAME/2
         const val MFCC_NUM_COEFFS = 13
-        const val MFCC_NUM_FILTERS = 25
+        const val MFCC_NUM_FILTERS = 30
         const val MFCC_LOWER_CUTOFF = 40f
         const val MFCC_UPPER_CUTOFF = 8000f
-        const val DEFAULT_TUNING = 1.0
+        const val DEFAULT_TUNING = .71
     }
 }

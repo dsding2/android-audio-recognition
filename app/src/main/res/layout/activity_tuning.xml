@@ -16,4 +16,25 @@
         android:layout_height="wrap_content"
         android:orientation="vertical" />
 
+    <SeekBar
+        android:id="@+id/mfccTuningSlider"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <SeekBar
+        android:id="@+id/deltaTuningSlider"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <SeekBar
+        android:id="@+id/volumeTuningSlider"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <Switch
+        android:id="@+id/normalizeSwitch"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Normalize Data" />
+
 </LinearLayout>
