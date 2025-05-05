@@ -11,6 +11,7 @@ import kotlin.math.sqrt
 
 class FeatureExtractor(
     private val mfcc: MFCC,
+    private val isLive : Boolean = false,
     private val onMfccRead: (Pair<Double, FloatArray>)->Unit
 ) : AudioProcessor {
     private var mfccBuffer = ArrayDeque<FloatArray>()
@@ -44,7 +45,11 @@ class FeatureExtractor(
 
         // Send result to your handler
 //        Log.d("AAAA", "${audioEvent.rms.toFloat()}")
-        onMfccRead(audioEvent.timeStamp to (currentMfcc + delta + audioEvent.rms.toFloat()))
+        if (!isLive) {
+            onMfccRead(audioEvent.timeStamp to (currentMfcc + delta + audioEvent.rms.toFloat()))
+        } else {
+            onMfccRead(System.currentTimeMillis()/1000.0 to (currentMfcc + delta + audioEvent.rms.toFloat()))
+        }
 
         // Maintain buffer size
         if (mfccBuffer.size > deltaOrder) {
@@ -57,20 +62,19 @@ class FeatureExtractor(
         mfcc.processingFinished()
     }
 
-    private fun lifter(mfcc: FloatArray, l: Int = 22): FloatArray {
-        val out = FloatArray(mfcc.size)
-        for (i in mfcc.indices) {
-            val lift = 1 + (l / 2.0f) * sin(Math.PI * i / l).toFloat()
-            out[i] = mfcc[i] * lift // Apply the lift
-        }
-        return out
-    }
+//    private fun lifter(mfcc: FloatArray, l: Int = 22): FloatArray {
+//        val out = FloatArray(mfcc.size)
+//        for (i in mfcc.indices) {
+//            val lift = 1 + (l / 2.0f) * sin(Math.PI * i / l).toFloat()
+//            out[i] = mfcc[i] * lift // Apply the lift
+//        }
+//        return out
+//    }
 
     companion object {
         var mfccWeight = 40f
         var deltaWeight = 30f
         var volumeWeight = 60f
-        var renormalizing = true
         fun reweight(data: Float, idx: Int, l: Int = 22): Float {
             if (idx < Globals.MFCC_NUM_COEFFS) {
                 val lift = 1 + (l / 2.0f) * sin(Math.PI * idx / l).toFloat()
@@ -84,13 +88,6 @@ class FeatureExtractor(
         }
         fun zScoreNormalize(data: List<Pair<Double, FloatArray>>): List<Pair<Double, FloatArray>> {
             if (data.isEmpty()) return data
-            if (!renormalizing) {
-                return data.map { arr ->
-                    arr.first to FloatArray(data[0].second.size) { i ->
-                        reweight((arr.second[i]), i)
-                    }
-                }
-            }
 
             val numArrays = data.size
             val arrayLength = data[0].second.size
@@ -114,6 +111,10 @@ class FeatureExtractor(
                     if (std == 0f) 0f else reweight((arr.second[i] - means[i]) / std, i)
                 }
             }
+        }
+        fun singleZScoreNormalize(data: Float, idx: Int, mean: Float, stdDev: Float) : Float {
+            val safeStdDev = if (stdDev == 0f) 1f else stdDev
+            return reweight((data - mean) /safeStdDev, idx)
         }
     }
 }

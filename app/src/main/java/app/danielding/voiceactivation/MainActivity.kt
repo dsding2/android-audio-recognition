@@ -3,11 +3,8 @@ package app.danielding.voiceactivation
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.widget.Button
-import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -20,7 +17,6 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
 
-        val switchButton: Button = findViewById(R.id.button)
 
         val recordLinkButton: Button = findViewById(R.id.recordLinkButton)
         recordLinkButton.setOnClickListener {

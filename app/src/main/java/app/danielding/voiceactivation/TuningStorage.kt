@@ -10,6 +10,11 @@ import kotlinx.coroutines.runBlocking
 object TuningStorage {
     private val Context.dataStore by preferencesDataStore(name = "tuning_data_store")
     private val TUNING_MAP_KEY = stringPreferencesKey("tuning_map_key")
+    enum class WeightType(val label: String, val default: Double) {
+        MFCC("mfcc", Globals.DEFAULT_MFCC_WEIGHT),
+        DELTA("delta", Globals.DEFAULT_DELTA_WEIGHT),
+        VOLUME("volume", Globals.DEFAULT_VOLUME_WEIGHT)
+    }
 
     // Save a Map<String, Uri> to the DataStore
     fun saveData(context: Context, data: Map<String, Double>) {
@@ -48,6 +53,17 @@ object TuningStorage {
 
     fun clear(context: Context) {
         saveData(context, mapOf())
+    }
+
+    private fun getWeightKey(filename: String, type: WeightType) : String {
+        return "${filename}_${type.label}"
+    }
+
+    fun getWeight(context: Context, filename: String, type: WeightType): Double {
+        return getData(context)[getWeightKey(filename, type)] ?: type.default
+    }
+    fun putWeight(context: Context, filename: String, type: WeightType, newVal: Double) {
+        putData(context, getWeightKey(filename, type), newVal)
     }
 
     private fun mapToJson(map: Map<String, Double>): String {

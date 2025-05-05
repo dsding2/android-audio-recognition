@@ -33,6 +33,8 @@ class PlaybackActivity : AppCompatActivity() {
     private lateinit var referenceController: ReferenceController
     private lateinit var audioRecord: AudioRecord
     private lateinit var captureController: CaptureController
+    private var nextVideo = "idle"
+    private var currVideo = "idle"
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,11 +53,13 @@ class PlaybackActivity : AppCompatActivity() {
             Log.d("debug audio", "init failed")
             return
         }
-        captureController = CaptureController(audioRecord, referenceController::broadcastMfcc)
+        captureController = CaptureController(audioRecord, referenceController::broadcastMfcc) {}
 
         videoView = findViewById(R.id.videoView)
         videoView.setOnCompletionListener {
-            setVideoToFilename("idle")
+            Log.d("AAAAAA", "video done")
+            setVideoToFilename(nextVideo)
+            nextVideo = "idle"
         }
         setVideoToFilename("idle")
     }
@@ -66,19 +70,24 @@ class PlaybackActivity : AppCompatActivity() {
     }
 
     private fun onSimilarity(matchedAudio: String) {
-        Log.d("on similarity", "$matchedAudio is similar")
-        setVideoToFilename(matchedAudio)
+        Log.d("AAAAAA", "$matchedAudio is similar")
+        if (currVideo == "idle") {
+            setVideoToFilename(matchedAudio)
+        } else {
+            nextVideo = matchedAudio
+        }
     }
 
     private fun setVideoToFilename(filename: String) {
         val file = VideoStorage.getFile(this, filename)
         if (file != null) {
+            currVideo = filename
             runOnUiThread {
                 videoView.setVideoURI(Uri.fromFile(file))
                 videoView.start()
             }
         } else {
-            Log.d("PlaybackActivity", "Video $filename not found")
+            Log.d("AAAAAA", "Video $filename not found")
         }
     }
 }

@@ -1,40 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
+    android:id="@+id/mainTuningLayout"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:orientation="vertical">
 
     <TextView
         android:id="@+id/textView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Manage Recordings" />
+        android:text="Tune Sensitivity" />
 
-    <LinearLayout
-        android:id="@+id/tuningAudioLayout"
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:id="@+id/tuningAudioLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </ScrollView>
+
+    <Button
+        android:id="@+id/resetTuningButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical" />
-
-    <SeekBar
-        android:id="@+id/mfccTuningSlider"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
-
-    <SeekBar
-        android:id="@+id/deltaTuningSlider"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
-
-    <SeekBar
-        android:id="@+id/volumeTuningSlider"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
-
-    <Switch
-        android:id="@+id/normalizeSwitch"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Normalize Data" />
+        android:text="Reset Tuning Parameters" />
 
 </LinearLayout>

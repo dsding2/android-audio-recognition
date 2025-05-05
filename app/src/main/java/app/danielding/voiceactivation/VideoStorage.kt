@@ -40,7 +40,6 @@ object VideoStorage {
             if (!created) return false
         }
 
-        deleteVideo(context, audioFilename)
         val videoFile = File(subdir, filename)
         return try {
             val inputStream: InputStream? = context.contentResolver.openInputStream(videoUri)
@@ -56,7 +55,7 @@ object VideoStorage {
                 true
             } == true
         } catch (e: IOException) {
-            Log.e("VideoStorage", "Error saving video", e)
+            Log.e("BBBBB", "Error saving video", e)
             false
         }
     }
