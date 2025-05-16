@@ -72,7 +72,7 @@ class CaptureController (
                     val estRead = audioEvent.timeStamp - lastTimestamp
                     lastRealTime = currentTime
                     lastTimestamp = audioEvent.timeStamp
-                    Log.d("overprocessing", "${estReal/estRead}")
+//                    Log.d("overprocessing", "${estReal/estRead}")
 
                     if (estRead > 0 && (estReal / estRead) > 1.1) {
                         missedReads += 1

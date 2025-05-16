@@ -1,7 +1,6 @@
 package app.danielding.voiceactivation.processor
 
 import android.content.Context
-import android.util.Log
 import app.danielding.voiceactivation.AudioStorage
 import app.danielding.voiceactivation.CircularBuffer
 import app.danielding.voiceactivation.CircularTimeSeries
@@ -21,6 +20,7 @@ import kotlin.math.sqrt
 class ReferenceComparison(
     private val context: Context,
     private val filename: String,
+    private val numComparisons: Int,
     private val onSimilarity: (String)->Unit,
     var onCheck: ((Double)->Unit)? = null
 ) {
@@ -56,7 +56,7 @@ class ReferenceComparison(
             referenceTimeSeries = buildTimeSeries(referenceList)
             clipLength = referenceTimeSeries!!.getTimeAtNthPoint(referenceTimeSeries!!.size()-1)- referenceTimeSeries!!.getTimeAtNthPoint(0)
             sensitivity = TuningStorage.getValue(context, filename)
-            alpha = 1.0/50.0 / clipLength
+            alpha = (numComparisons * Globals.SKIPPED_FRAMES) * 2.0/50.0 / clipLength
         }
     }
 
@@ -65,7 +65,7 @@ class ReferenceComparison(
         if (referenceList.isEmpty()) {
             return
         }
-        val timeSeries = CircularTimeSeries(circularBuffer, (referenceList.size*1.2+4).toInt(), this::reweight)
+        val timeSeries = CircularTimeSeries(circularBuffer, (referenceList.size*1.1 + Globals.SKIPPED_FRAMES*numComparisons).toInt(), this::reweight)
         val currentTime = timeSeries.getTimeAtNthPoint(0)
         val seenDistance = FastDTW.compare(referenceTimeSeries, timeSeries, EuclideanDistance()).distance
         if (seenDistance < rollingDistAvg && similarityDetectedTime < 0) {
@@ -83,7 +83,7 @@ class ReferenceComparison(
         if (rollingDistAvg > 0 && onCheck != null) {
             onCheck?.invoke(seenDistance/rollingDistAvg)
         }
-        Log.d("AA", "$seenDistance, $rollingDistAvg, ${seenDistance/rollingDistAvg}")
+//        Log.d("AA", "$seenDistance, $rollingDistAvg, ${seenDistance/rollingDistAvg}")
         lastDistance = seenDistance
         rollingDistAvg = rollingDistAvg * (1-alpha) + seenDistance * alpha
     }

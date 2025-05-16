@@ -15,7 +15,7 @@ class Globals : Application() {
         )*2
         const val AUDIO_ENCODING = AudioFormat.ENCODING_PCM_16BIT
         val TARSOS_AUDIO_FORMAT = TarsosDSPAudioFormat(SAMPLE_RATE.toFloat(), 16, 1, true, false)
-        const val SAMPLES_PER_FRAME = 2048
+        const val SAMPLES_PER_FRAME = 2048/2
         const val BUFFER_OVERLAP = SAMPLES_PER_FRAME/2
         const val MFCC_NUM_COEFFS = 13
         const val MFCC_NUM_FILTERS = 30
@@ -23,6 +23,7 @@ class Globals : Application() {
         const val MFCC_UPPER_CUTOFF = 8000f
         const val NUM_FEATURE_DIMENSIONS = MFCC_NUM_COEFFS * 2 + 1
         const val DEFAULT_TUNING = .71
+        const val SKIPPED_FRAMES = 4
 
         const val DEFAULT_MFCC_WEIGHT = 40.0
         const val DEFAULT_DELTA_WEIGHT = 30.0

@@ -33,7 +33,6 @@ class PlaybackActivity : AppCompatActivity() {
     private lateinit var referenceController: ReferenceController
     private lateinit var audioRecord: AudioRecord
     private lateinit var captureController: CaptureController
-    private var nextVideo = "idle"
     private var currVideo = "idle"
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
@@ -57,9 +56,9 @@ class PlaybackActivity : AppCompatActivity() {
 
         videoView = findViewById(R.id.videoView)
         videoView.setOnCompletionListener {
-            Log.d("AAAAAA", "video done")
-            setVideoToFilename(nextVideo)
-            nextVideo = "idle"
+//            Log.d("AAAAAA", "video done")
+            setVideoToFilename("idle")
+//            nextVideo = "idle"
         }
         setVideoToFilename("idle")
     }
@@ -73,8 +72,6 @@ class PlaybackActivity : AppCompatActivity() {
         Log.d("AAAAAA", "$matchedAudio is similar")
         if (currVideo == "idle") {
             setVideoToFilename(matchedAudio)
-        } else {
-            nextVideo = matchedAudio
         }
     }
 
